@@ -22,10 +22,11 @@ MongoClient.connect("mongodb://localhost:27017", (err, client) => {
 
 app.get("/", (req, res) => {
   const cursor = db.collection('stocks').find().toArray(function (err, documents) {
-    console.log(documents);
+    // console.log(documents);
   });
 
-  console.log(cursor)
+  // console.log(cursor)
+  res.sendfile(`${__dirname}/index.html`);
 });
 
 app.post("/save", (req, res) => {
