@@ -26,11 +26,13 @@ app.get("/", (req, res) => {
   });
 
   // console.log(cursor)
-  res.sendfile(`${__dirname}/index.html`);
+  res.sendFile(`${__dirname}/index.html`);
 });
 
 app.post("/save", (req, res) => {
-  saveStockToDatabase(req.body.code);
+  const { code, fromDate, toDate } = req.body;
+  
+  saveStockToDatabase(code, fromDate, toDate);
   res.send("Nice");
 });
 
@@ -94,12 +96,12 @@ function saveStocksToDatabase(code) {
   });
 }
 
-function saveStockToDatabase(code) {
-  let startDate = moment("2019-01-01").format("YYYY-MM-DD");
-  let currentDate = moment().format("YYYY-MM-DD");
+function saveStockToDatabase(code, fromDate, toDate) {
+  let startDate = moment(fromDate).format("YYYY-MM-DD");
+  let endDate = moment(toDate).format("YYYY-MM-DD");
   let dateArray = [];
 
-  while (startDate <= currentDate) {
+  while (startDate <= endDate) {
     dateArray.push(moment(startDate).format("YYYY-MM-DD"));
     startDate = moment(startDate)
       .add(1, "days")
@@ -107,11 +109,10 @@ function saveStockToDatabase(code) {
   }
 
   dateArray.forEach(date => {
-
     const simpleDate = moment(date).format('YYYY-MM-DD');
     const day = moment(date).format('dddd');
 
-    fetch(`http://phisix-api.appspot.com/stocks/${code}.${date}.json`)
+    fetch(`http://phisix-api2.appspot.com/stocks/${code}.${date}.json`)
       .then(res => res.text())
       .then(data => {
         if (data && !data.includes('html')) {
@@ -129,16 +130,12 @@ function saveStockToDatabase(code) {
         }
         else {
           if (!(day === 'Sunday' || day === 'Saturday')) {
-              console.log(simpleDate)
-              console.log(day)
-              console.log(code)
             let stock = {
               code,
               date: new Date(simpleDate),
               day
             };
 
-            console.log(`Error will be logged for ${code} ${simpleDate} ${day}`)
             db.collection("stocks_error").insertOne(stock, (dbErr, dbRes) => {
               if (dbErr) return console.log(err);
               console.log(`Error logged for ${code} ${simpleDate} ${day}`)
@@ -147,23 +144,5 @@ function saveStockToDatabase(code) {
         }
       })
       .catch(error => console.log('error', error))
-  });
-}
-
-function saveAllStockToDatabase() {
-  request("http://phisix-api.appspot.com/stocks.json", (err, resp, body) => {
-    let stockCodes = getAllStockCodes(body);
-
-    stockCodes.forEach(code => {
-      request(
-        `http://phisix-api.appspot.com/stocks/${code}.json`,
-        (err, resp, body) => {
-          let stock = JSON.parse(body).stock[0];
-          db.collection("stocks").insertOne(stock, (dbErr, dbRes) => {
-            if (dbErr) return console.log(err);
-          });
-        }
-      );
-    });
   });
 }
